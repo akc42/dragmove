@@ -1,0 +1,15 @@
+
+libs
+node_modules
+SystemVolumeInformation
+
+**/.env
+.DS_Store
+npm-debug.log
+resolved
+build
+keys/pas-cert.pem
+keys/pas-privkey.pem
+
+
+

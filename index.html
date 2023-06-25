@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+
+<!--
+/*
+@licence
+    Copyright (c) 2023 Alan Chandler, all rights reserved
+
+    This file is part of Dragmove.
+
+    Dragmove is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Dragmove is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Dragmove.  If not, see <http://www.gnu.org/licenses/>.
+*/
+-->
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes, shrink-to-fit=no">
+    <title>Dragmove Demo with Lit</title>
+    <!-- because this can be served from anywhere base allows us to use relative urls -->
+    <base href="/">
+
+ 
+    <link rel="shortcut icon" sizes="48x48" href="/images/pas-icon-48.png">
+    <meta name="theme-color" content="darkblue"/>
+    <!-- Add to homescreen for Safari on iOS -->
+    <meta name="mobile-wep-app-capable" content="yes">
+    <meta name="apple-mobile-wep-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <meta name="apple-mobile-web-app-title" content="PASv5"/>
+
+    <!-- Homescreen icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/pas-icon-180.png">
+
+    <!-- Tile icon for Windows 8 (144x144 + tile color) -->
+    <meta name="msapplication-TileImage" content="/images/pas-icon-144.png"/>
+    <meta name="msapplication-TileColor" content="darkblue"/>
+    <meta name="msapplication-tap-highlight" content="no"/>
+
+    <link rel="manifest" href="/manifest.webmanifest">
+    <!-- The main stylesheet -->
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <script>
+      let deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredPrompt = event; //store it, so we can pass it to pas-app as soon as we signs of life from it.
+      });
+      // Register the base URL
+      const baseUrl = document.querySelector('base').href;
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+          try {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+              const blob = new Blob([JSON.stringify({
+                message: event.data ?? 'Unknown Message',
+                topic: 'Service Worker'
+              })], { type: 'application/json' });
+              navigator.sendBeacon(`/api/log`, blob);
+            });
+            const registration = await navigator.serviceWorker.register(baseUrl + 'service-worker.js');
+            registration.update();        
+            document.body.addEventListener('pas-sw-update-check', () => {
+              if (deferredPrompt !== null) {
+                //weve had a beforeinstallprompt so tell the app via and event
+                document.body.dispatchEvent(new CustomEvent('pas-homescreen-add', {detail: deferredPrompt}));
+                deferredPrompt = null;  //just prevent us from doing it over and over
+              }
+              registration.update();
+            });       
+            let refreshing = false;
+            // detect controller change and refresh the page
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              if (!refreshing) {
+                window.location.reload()
+                refreshing = true
+              }
+            });
+          } catch(e) {
+            //Inform Server about Problem
+            const blob = new Blob([JSON.stringify({
+              message: e.message ?? 'Unknown Error During Registration',
+              topic: 'Service Worker'
+            })], { type: 'application/json' });
+            navigator.sendBeacon(`/api/log`, blob);
+            if ('Notification' in window) {
+              const notification = new Notification('Accuvision Certificate Problem', {
+                body: 'The Accuvision CA Certificate is not properly installed.  Click on this notification and follow the instructions in Certificate Help',
+                tag: 'certificate',
+                icon: '../images/pas-icon-192.png'
+              });
+              notification.onclick = function(e) {
+                event.preventDefault(); // prevent the browser from focusing the Notification's tab
+                const thisUrl = window.location.href;
+                const certUrl = new URL('../index.html', thisUrl);
+                //we add a query string to make sure previous cached 301 redirects are not used
+                const q = new Date().getTime().toString().slice(-4);
+                certUrl.search = '?' + q;
+                /*
+                  We do this here because we cannot switch protocols within the page and safari wont 
+                  allow the download if the protocol is https and the cert is invalid.
+                */
+                certUrl.protocol = 'http:'
+                window.open(certUrl.href, '_blank');  //open in a new tab
+              }
+            }
+          }
+        });
+
+      }
+    </script>
+    <script type="module" src="/components/pas-app.js"></script>
+    <script type="module" src="/libs/lit-element.js"></script>
+    <script type="module" src="/components/pas-logo.js"></script>
+    <style>
+      html {
+        background: #ffffff;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Poppins", sans-serif;
+        line-height: 1.5;
+        letter-spacing: 0.1em;
+        background-color: #fafafa;
+        color: #333;
+      }
+
+      /* styling for render while resources are loading */
+      pas-app[unresolved] {
+        display: grid;
+        grid-gap:5px;
+        grid-template-rows: [header-start] 64px [header-end main-start] 1fr [main-end];
+        grid-template-columns: 1fr;
+        line-height: 68px;
+        font-size: 16pt;
+        color: #202020;
+        background-color:#ffffff;
+        height: 100vh;
+
+      }
+      pas-app[unresolved] header {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        height: 64px;
+        background-color: #303F9F;
+        color: #ffffff;
+        width: 100%;
+        box-shadow: 0px 20px 41px 0px rgba(0,0,0,0.2);
+      }
+      pas-app[unresolved] section {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        letter-spacing: 0.3em;
+        font-weight: 600;
+      }
+    </style>
+
+  </head>
+  <body>
+    <pas-app unresolved>
+      <header class="header"><div>Patient Administration System</div></header>
+      <section>
+        <div>Application Loading ...</div>
+        <div>If this message persists it is likely you need to respond to a certificate</div>
+      </section>
+    </pas-app>
+    <noscript>
+      Please enable JavaScript to use PASv5.
+    </noscript>
+  </body>
+</html>

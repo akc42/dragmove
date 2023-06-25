@@ -1,0 +1,39 @@
+{
+  "name": "dragmove",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Top Level Control File ForDragmove",
+  "licence": "SEE LICENCE IN LICENCE.md",
+  "main": "server/server.js",
+  "type": "module",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "setup": "npm install && npm run enviro",
+    "enviro": "node scripts/buildenv.cjs",
+    "lint": "eslint --ext .js,.html .",
+    "test:all": "npm run lint && npm run test:server && npm run test:client && npm test",
+    "pretest": "pm2 start pas-home.json && node scripts/createtestuser.js",
+    "test": "jest -c jest-e2e-config.js",
+    "posttest": "node scripts/deletetestuser.js",
+    "pretest:client": "pm2 start pas-home.json && node scripts/createtestuser.js",
+    "test:client": "jest -c jest-client-config.js",
+    "test:server": "jest -c jest-server-config.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:akc42/pasv5.git"
+  },
+  "author": "Alan Chandler <alan.chandler@hartley-consultants.com",
+  "license": "SEE LICENCE IN license.md",
+  "devDependencies": {
+
+  },
+  "dependencies": {
+    "@akc42/app-utils": "^3.6.3",
+    "@rollup/plugin-node-resolve": "^13.0.4",
+    "rollup": "^2.56.3",
+    "rollup-plugin-sourcemaps": "^0.6.3",
+  }
+}
